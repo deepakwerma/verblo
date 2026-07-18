@@ -1,5 +1,4 @@
-import React, { Children } from 'react'
-
+import React, { Children } from "react";
 
 export default function AuthLayout({
   children,
@@ -7,8 +6,8 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-gray-50">
-      {children}
-    </div>
+    <section className="flex flex-col h-screen items-centre justify-centre">
+      <div className="w-full max-w-md">{children}</div>
+    </section>
   );
 }
