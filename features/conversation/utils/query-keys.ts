@@ -1,7 +1,7 @@
 export const queryKeys = {
   conversations: {
     all: ["conversations"] as const,
-    detail: (id: string) => ["converstations", id] as const,
+    detail: (id: string) => ["conversations", id] as const,
   },
   message: {
     byConversation: (conversationId: string) =>
