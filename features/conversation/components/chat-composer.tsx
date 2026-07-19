@@ -20,9 +20,7 @@ type ChatComposerProps = {
   autoFocus?: boolean;
 };
 
-/**
- * Message input form with send button. Enter sends; Shift+Enter inserts a newline.
- */
+
 export function ChatComposer({
   onSend,
   isSending = false,
@@ -39,7 +37,7 @@ export function ChatComposer({
     }
   }, [autoFocus]);
 
-  /** Submits the current message when the form is submitted or Enter is pressed. */
+ 
   async function handleSubmit(event?: React.FormEvent) {
     event?.preventDefault();
     const content = value.trim();
@@ -50,7 +48,7 @@ export function ChatComposer({
     textareaRef.current?.focus();
   }
 
-  /** Handles keyboard shortcuts — Enter to send, Shift+Enter for a new line. */
+ 
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();

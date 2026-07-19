@@ -21,27 +21,44 @@ model User {
 }
 
 model Conversation {
-  id            String    @id @default(cuid())
-  userId        String
-  title         String    @default("New Chat")
-  model         String?
-  systemPrompt  String?   @db.Text
-  isPinned      Boolean   @default(false)
-  isArchived    Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  lastMessageAt DateTime?
+  id             String    @id @default(cuid())
+  userId         String
+  title          String    @default("New Chat")
+  model          String?
+  systemPrompt   String?   @db.Text
+  isPinned       Boolean   @default(false)
+  isArchived     Boolean   @default(false)
+  activeBranchId String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  lastMessageAt  DateTime?
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages Message[]
+  branches Branch[]
 
   @@index([userId, lastMessageAt(sort: Desc)])
   @@index([userId, isPinned, lastMessageAt(sort: Desc)])
 }
 
+model Branch {
+  id              String   @id @default(cuid())
+  conversationId  String
+  name            String   @default("Main")
+  parentMessageId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  messages     Message[]
+
+  @@index([conversationId])
+}
+
 model Message {
   id             String        @id @default(cuid())
   conversationId String
+  branchId       String?
   role           MessageRole
   status         MessageStatus @default(COMPLETE)
   content        String        @db.Text
@@ -52,6 +69,7 @@ model Message {
   updatedAt      DateTime      @updatedAt
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: Cascade) // NEW
 
   parent   Message?  @relation("MessageBranch", fields: [parentId], references: [id], onDelete: SetNull)
   children Message[] @relation("MessageBranch")

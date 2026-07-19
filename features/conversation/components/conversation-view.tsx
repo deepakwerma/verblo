@@ -11,18 +11,29 @@ import { toast } from "sonner";
 import { ChatEmpty } from "./chat-empty";
 import { ChatMessages } from "./chat-messages";
 import { ChatComposer } from "./chat-composer";
+import { BranchSwitcher } from "./branch-switcher";
+
+type BranchListItem = {
+  id: string;
+  conversationId: string;
+  name: string;
+  parentMessageId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 type ConversationViewProps = {
   conversationId: string;
   initialMessages: UIMessage[];
+  branches: BranchListItem[];
+  activeBranchId: string;
 };
 
-/**
- * Main chat view — header, message list (or empty state), and composer with streaming.
- */
 export const ConversationView = ({
   conversationId,
   initialMessages,
+  branches,
+  activeBranchId,
 }: ConversationViewProps) => {
   const queryClient = useQueryClient();
   const { data: conversations } = useConversations();
@@ -63,6 +74,13 @@ export const ConversationView = ({
         <SidebarTrigger />
         <Separator orientation="vertical" className="mx-1 h-4" />
         <h1 className="truncate text-sm font-medium">{title}</h1>
+        <div className="ml-auto">
+          <BranchSwitcher
+            conversationId={conversationId}
+            branches={branches}
+            activeBranchId={activeBranchId}
+          />
+        </div>
       </header>
 
       {messages.length === 0 ? (

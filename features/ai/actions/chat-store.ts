@@ -3,16 +3,18 @@
 import { isTextUIPart, type UIMessage } from "ai";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/db";
-
+import { getBranchMessages } from "@/features/conversation/actions/branch-actions";
 
 function getMessageText(message: UIMessage) {
-  return message.parts.filter(isTextUIPart).map((part) => part.text).join("");
+  return message.parts
+    .filter(isTextUIPart)
+    .map((part) => part.text)
+    .join("");
 }
-
 
 function toUIMessageParts(
   parts: Prisma.JsonValue | null,
-  content: string
+  content: string,
 ): UIMessage["parts"] {
   const stored = parts as UIMessage["parts"] | null;
   if (Array.isArray(stored) && stored.length > 0) {
@@ -22,14 +24,8 @@ function toUIMessageParts(
   return [{ type: "text", text: content }];
 }
 
-
-export async function loadChatMessages(
-  conversationId: string
-): Promise<UIMessage[]> {
-  const rows = await prisma.message.findMany({
-    where: { conversationId },
-    orderBy: { createdAt: "asc" },
-  });
+export async function loadChatMessages(branchId: string): Promise<UIMessage[]> {
+  const rows = await getBranchMessages(branchId);
 
   return rows.map((row) => ({
     id: row.id,
@@ -42,17 +38,16 @@ type SaveChatMessagesOptions = {
   updateTitle?: boolean;
 };
 
-
 export async function saveChatMessages(
   conversationId: string,
+  branchId: string, // NAYA PARAMETER
   messages: UIMessage[],
-  options: SaveChatMessagesOptions = {}
+  options: SaveChatMessagesOptions = {},
 ) {
   const { updateTitle = true } = options;
 
   for (const message of messages) {
     if (message.role === "system") continue;
-
     const content = getMessageText(message);
     const role = message.role === "assistant" ? "ASSISTANT" : "USER";
 
@@ -61,6 +56,7 @@ export async function saveChatMessages(
       create: {
         id: message.id,
         conversationId,
+        branchId,
         role,
         status: "COMPLETE",
         content,
