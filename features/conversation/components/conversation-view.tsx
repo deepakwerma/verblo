@@ -42,18 +42,18 @@ export const ConversationView = ({
     () =>
       new DefaultChatTransport({
         api: "/api/chat",
-        prepareSendMessagesRequest: ({ id, messages }) => ({
+        prepareSendMessagesRequest: ({ messages }) => ({
           body: {
-            id,
+            id: conversationId,
             message: messages.at(-1),
           },
         }),
       }),
-    [],
+    [conversationId],
   );
 
   const { messages, sendMessage, status } = useChat({
-    id: conversationId,
+    id: `${conversationId}:${activeBranchId}`,
     messages: initialMessages,
     transport,
     onFinish: () => {
@@ -86,7 +86,11 @@ export const ConversationView = ({
       {messages.length === 0 ? (
         <ChatEmpty />
       ) : (
-        <ChatMessages messages={messages} status={status} />
+        <ChatMessages
+          messages={messages}
+          status={status}
+          conversationId={conversationId}
+        />
       )}
 
       <ChatComposer

@@ -4,7 +4,6 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/features/auth/action/require-user";
 import { revalidatePath } from "next/cache";
 
-
 export async function getOrCreateMainBranch(conversationId: string) {
   let branch = await prisma.branch.findFirst({
     where: { conversationId, parentMessageId: null },
@@ -30,7 +29,7 @@ export async function getOrCreateMainBranch(conversationId: string) {
 export async function createBranch(
   conversationId: string,
   fromMessageId: string,
-  name?: string
+  name?: string,
 ) {
   const user = await requireUser();
 
@@ -58,9 +57,10 @@ export async function createBranch(
   return branch;
 }
 
-
 export async function getBranchMessages(branchId: string): Promise<any[]> {
-  const branch = await prisma.branch.findUniqueOrThrow({ where: { id: branchId } });
+  const branch = await prisma.branch.findUniqueOrThrow({
+    where: { id: branchId },
+  });
 
   let history: any[] = [];
   if (branch.parentMessageId) {
@@ -68,7 +68,9 @@ export async function getBranchMessages(branchId: string): Promise<any[]> {
       where: { id: branch.parentMessageId },
     });
     const ancestorMessages = await getBranchMessages(parentMessage.branchId!);
-    const cutoff = ancestorMessages.findIndex((m) => m.id === branch.parentMessageId);
+    const cutoff = ancestorMessages.findIndex(
+      (m) => m.id === branch.parentMessageId,
+    );
     history = ancestorMessages.slice(0, cutoff + 1);
   }
 
@@ -80,13 +82,17 @@ export async function getBranchMessages(branchId: string): Promise<any[]> {
   return [...history, ...own];
 }
 
-
 export async function listBranches(conversationId: string) {
-  await getOrCreateMainBranch(conversationId);
-  return prisma.branch.findMany({
+  const mainBranch = await getOrCreateMainBranch(conversationId);
+
+  const allBranches = await prisma.branch.findMany({
     where: { conversationId },
     orderBy: { createdAt: "asc" },
   });
+
+  return allBranches.filter(
+    (b) => b.parentMessageId !== null || b.id === mainBranch.id,
+  );
 }
 
 export async function switchBranch(conversationId: string, branchId: string) {
@@ -103,7 +109,11 @@ export async function switchBranch(conversationId: string, branchId: string) {
   revalidatePath(`/chat/${conversationId}`);
 }
 
-export async function renameBranch(conversationId: string, branchId: string, name: string) {
+export async function renameBranch(
+  conversationId: string,
+  branchId: string,
+  name: string,
+) {
   await prisma.branch.update({ where: { id: branchId }, data: { name } });
   revalidatePath(`/chat/${conversationId}`);
 }
@@ -111,11 +121,14 @@ export async function renameBranch(conversationId: string, branchId: string, nam
 export async function deleteBranch(conversationId: string, branchId: string) {
   const branch = await prisma.branch.findUnique({ where: { id: branchId } });
   if (!branch) return;
-  if (branch.parentMessageId === null) throw new Error("Cannot delete Main branch");
+  if (branch.parentMessageId === null)
+    throw new Error("Cannot delete Main branch");
 
   await prisma.branch.delete({ where: { id: branchId } }); // cascades its own messages
 
-  const conversation = await prisma.conversation.findUnique({ where: { id: conversationId } });
+  const conversation = await prisma.conversation.findUnique({
+    where: { id: conversationId },
+  });
   if (conversation?.activeBranchId === branchId) {
     const main = await getOrCreateMainBranch(conversationId);
     await prisma.conversation.update({

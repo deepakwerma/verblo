@@ -14,7 +14,7 @@ import {
   MessageResponse,
 } from "@/components/ai-elements/message";
 import { Loader } from "@/components/ai-elements/loader";
-
+import { BranchButton } from "./branch-button";
 
 function getMessageText(message: UIMessage) {
   return message.parts
@@ -26,21 +26,37 @@ function getMessageText(message: UIMessage) {
 type ChatMessagesProps = {
   messages: UIMessage[];
   status: ChatStatus;
+  conversationId: string;
 };
 
-
-export function ChatMessages({ messages, status }: ChatMessagesProps) {
+export function ChatMessages({
+  messages,
+  status,
+  conversationId,
+}: ChatMessagesProps) {
   const isWaiting = status === "submitted" && messages.at(-1)?.role === "user";
 
   return (
     <Conversation>
       <ConversationContent className="py-8">
         {messages.map((message) => (
-          <Message key={message.id} from={message.role}>
-            <MessageContent>
-              <MessageResponse>{getMessageText(message)}</MessageResponse>
-            </MessageContent>
-          </Message>
+          <div key={message.id} className="group">
+            <Message from={message.role}>
+              <MessageContent>
+                <MessageResponse>{getMessageText(message)}</MessageResponse>
+              </MessageContent>
+            </Message>
+            <div
+              className={
+                message.role === "user" ? "flex justify-end pr-2" : "pl-2"
+              }
+            >
+              <BranchButton
+                conversationId={conversationId}
+                messageId={message.id}
+              />
+            </div>
+          </div>
         ))}
 
         {isWaiting ? (
