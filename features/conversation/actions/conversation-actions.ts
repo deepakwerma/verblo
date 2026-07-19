@@ -52,19 +52,13 @@ export async function listConversations(): Promise<ConversationListItem[]> {
   });
 }
 
-const DEFAULT_MODEL = "gpt-4o-mini";
-
-export async function createConversation(
-  title = "New Chat",
-  model: string = DEFAULT_MODEL,
-) {
+export async function createConversation(title = "New Chat") {
   const user = await requireUser();
 
   return prisma.conversation.create({
     data: {
       userId: user.id,
       title: title.trim() || "New Chat",
-      model,
     },
   });
 }
