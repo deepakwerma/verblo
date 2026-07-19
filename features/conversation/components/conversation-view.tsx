@@ -1,60 +1,83 @@
 "use client";
+import { Separator } from "@/components/ui/separator";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useQueryClient } from "@tanstack/react-query";
+import { DefaultChatTransport, type UIMessage } from "ai";
+import { useChat } from "@ai-sdk/react";
+import React, { useMemo } from "react";
+import { useConversations } from "../hooks/use-conversation";
+import { queryKeys } from "../utils/query-keys";
+import { toast } from "sonner";
+import { ChatEmpty } from "./chat-empty";
+import { ChatMessages } from "./chat-messages";
+import { ChatComposer } from "./chat-composer";
 
-import { isTextUIPart, type UIMessage } from "ai";
-import type { ChatStatus } from "ai";
-
-import {
-  Conversation,
-  ConversationContent,
-  ConversationScrollButton,
-} from "@/components/ai-elements/conversation";
-import {
-  Message,
-  MessageContent,
-  MessageResponse,
-} from "@/components/ai-elements/message";
-import { Loader } from "@/components/ai-elements/loader";
-
-/** Extracts plain text from a `UIMessage` by joining all text parts. */
-function getMessageText(message: UIMessage) {
-  return message.parts
-    .filter(isTextUIPart)
-    .map((part) => part.text)
-    .join("");
-}
-
-type ChatMessagesProps = {
-  messages: UIMessage[];
-  status: ChatStatus;
+type ConversationViewProps = {
+  conversationId: string;
+  initialMessages: UIMessage[];
 };
 
 /**
- * Renders the conversation message list with markdown responses and a loading indicator.
+ * Main chat view — header, message list (or empty state), and composer with streaming.
  */
-export function ChatMessages({ messages, status }: ChatMessagesProps) {
-  const isWaiting =
-    status === "submitted" && messages.at(-1)?.role === "user";
+export const ConversationView = ({
+  conversationId,
+  initialMessages,
+}: ConversationViewProps) => {
+  const queryClient = useQueryClient();
+  const { data: conversations } = useConversations();
+
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: "/api/chat",
+        prepareSendMessagesRequest: ({ id, messages }) => ({
+          body: {
+            id,
+            message: messages.at(-1),
+          },
+        }),
+      }),
+    [],
+  );
+
+  const { messages, sendMessage, status } = useChat({
+    id: conversationId,
+    messages: initialMessages,
+    transport,
+    onFinish: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.conversations.all,
+      });
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+  const title =
+    conversations?.find((item) => item.id === conversationId)?.title ?? "Chat";
 
   return (
-    <Conversation>
-      <ConversationContent className="py-8">
-        {messages.map((message) => (
-          <Message key={message.id} from={message.role}>
-            <MessageContent>
-              <MessageResponse>{getMessageText(message)}</MessageResponse>
-            </MessageContent>
-          </Message>
-        ))}
+    <div className="flex h-full min-h-0 flex-1 flex-col">
+      <header className="flex h-14 shrink-0 items-center gap-2 border-b px-3">
+        <SidebarTrigger />
+        <Separator orientation="vertical" className="mx-1 h-4" />
+        <h1 className="truncate text-sm font-medium">{title}</h1>
+      </header>
 
-        {isWaiting ? (
-          <Message from="assistant">
-            <MessageContent>
-              <Loader />
-            </MessageContent>
-          </Message>
-        ) : null}
-      </ConversationContent>
-   
-    </Conversation>
+      {messages.length === 0 ? (
+        <ChatEmpty />
+      ) : (
+        <ChatMessages messages={messages} status={status} />
+      )}
+
+      <ChatComposer
+        onSend={(text) => {
+          void sendMessage({ text });
+        }}
+        isSending={status !== "ready"}
+        autoFocus
+      />
+    </div>
   );
-}
+};
